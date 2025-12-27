@@ -65,7 +65,7 @@ Each song’s lyrics are converted into a fixed-length vector representation cap
 
 ### 3. Similarity Search
 
-* **Metric**: Cosine similarity
+* **Metric**: (rank_bm25) BM25Okapi
 * **Approach**: Top-K retrieval
 
 Given a lyric snippet:
