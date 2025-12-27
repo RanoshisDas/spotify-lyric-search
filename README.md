@@ -2,14 +2,14 @@
 
 ## Project Overview
 
-Spotify Lyric Search is a **machine learning / NLP project** that identifies the **most likely song title and artist** given a short snippet of song lyrics. The system uses **semantic text embeddings** and **similarity-based retrieval**, a standard approach in modern information retrieval systems.
+Spotify Lyric Search is a **machine learning / NLP project** that identifies the **most likely song title and artist** given a short snippet of song lyrics. The system uses **BM25 ranking algorithm** for text-based retrieval, a proven approach in information retrieval systems.
 
 This project is designed to demonstrate:
 
 * Text preprocessing and normalization
-* Transformer-based sentence embeddings
-* Cosine similarity search
+* BM25 (Best Matching 25) ranking algorithm
 * Top-K evaluation methodology
+* Information retrieval best practices
 
 The implementation is suitable for academic submission and follows industry-standard NLP practices.
 
@@ -17,7 +17,7 @@ The implementation is suitable for academic submission and follows industry-stan
 
 ## Dataset
 
-**Spotify / Lyrics Dataset (50k+ songs)**
+**Spotify Lyrics Dataset (50k+ songs)**
 
 ### Columns Used
 
@@ -47,39 +47,43 @@ Implemented in `src/preprocess.py`:
 * Removal of punctuation and special characters
 * Tokenization
 * Stop-word removal (NLTK)
-* Lemmatization
+* Lemmatization (WordNet Lemmatizer)
 
-This step reduces noise and improves semantic embedding quality.
-
----
-
-### 2. Embedding Model
-
-* **Model**: Sentence-BERT (`all-MiniLM-L6-v2`)
-* **Framework**: PyTorch
-* **Embedding Type**: Dense semantic sentence embeddings
-
-Each song’s lyrics are converted into a fixed-length vector representation capturing semantic meaning.
+This step reduces noise and improves retrieval quality by normalizing the text.
 
 ---
 
-### 3. Similarity Search
+### 2. Ranking Algorithm
 
-* **Metric**: (rank_bm25) BM25Okapi
-* **Approach**: Top-K retrieval
+* **Algorithm**: BM25 (Best Matching 25)
+* **Implementation**: BM25Okapi from `rank_bm25` library
+* **Type**: Probabilistic information retrieval
+
+BM25 is a ranking function used by search engines to estimate the relevance of documents to a given search query. It considers:
+- Term frequency (how often words appear)
+- Inverse document frequency (how rare/common words are)
+- Document length normalization
+
+Each song's lyrics are tokenized and indexed using BM25.
+
+---
+
+### 3. Search Process
+
+* **Approach**: Top-K retrieval using BM25 scoring
 
 Given a lyric snippet:
 
-1. The snippet is preprocessed
-2. Converted into an embedding
-3. Compared against all song embeddings
-4. The most similar songs are returned
+1. The snippet is preprocessed and tokenized
+2. BM25 scores are calculated for all songs in the corpus
+3. Songs are ranked by relevance score
+4. The top K most relevant songs are returned
 
 ---
 
-### 4. Artist-Aware Re-ranking (Optional Enhancement)
+### 4. Future Enhancement: Artist-Aware Re-ranking
 
-When multiple songs share the same title or similar lyrics, an optional **artist hint** can be provided. Results are then re-ranked to prioritize the matching artist.
+When multiple songs share the same title or similar lyrics, an optional **artist hint** can be provided. Results can then be re-ranked to prioritize the matching artist.
 
 This reflects real-world search behavior (e.g., Spotify or Google Search).
 
@@ -98,8 +102,11 @@ spotify-lyric-search/
 │
 ├── src/
 │   ├── preprocess.py
-│   ├── model.py
-│   └── search.py
+│   ├── model.py          # (Note: Embeddings generated but not used in current search)
+│   └── search.py         # BM25-based search implementation
+│
+├── results/
+│   └── output.png
 │
 ├── requirements.txt
 └── README.md
@@ -111,14 +118,14 @@ spotify-lyric-search/
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
 Recommended environment:
 
 * Python 3.10+
-* PyTorch (CPU)
+* Required libraries: pandas, numpy, nltk, rank_bm25, scikit-learn
 
 ---
 
@@ -132,14 +139,14 @@ jupyter notebook notebooks/lyric_search.ipynb
 
 Example query:
 
-```
-"hello from the other side I must have called a thousand times"
+```python
+search_engine.search("hello from the other side I must have called a thousand times", top_k=5)
 ```
 
 Output:
 
-* Top-K most semantically similar songs
-* Song title, artist name, similarity score
+* Top-K most relevant songs based on BM25 scores
+* Song title, artist name, relevance score
 
 ---
 
@@ -163,9 +170,9 @@ The model was evaluated on **100 randomly sampled songs** from the dataset using
 
 | Metric         | Score   |
 | -------------- | ------- |
-| Top-1 Accuracy | **83%** |
-| Top-3 Accuracy | **94%** |
-| Top-5 Accuracy | **96%** |
+| Top-1 Accuracy | **90%** |
+| Top-3 Accuracy | **96%** |
+| Top-5 Accuracy | **97%** |
 
 A visual summary of these results is shown below:
 
@@ -173,49 +180,69 @@ A visual summary of these results is shown below:
 
 **Interpretation:**
 
-* Top-1 accuracy reflects the inherent ambiguity of short lyric snippets
-* Top-3 and Top-5 scores demonstrate strong retrieval capability
-* Results align with industry expectations for semantic search systems
-
-Performance improves significantly with longer lyric input or when an artist hint is provided.
+* Top-1 accuracy of 90% demonstrates strong retrieval capability
+* Top-3 and Top-5 scores show excellent ranking quality
+* Results align with industry expectations for BM25-based retrieval systems
+* Performance improves with longer lyric input
 
 ---
 
 ## Known Limitations
 
 * The model can only retrieve songs **present in the dataset**
-* Very short lyric snippets reduce embedding distinctiveness
+* Very short lyric snippets (1-3 words) reduce matching accuracy
 * Multiple songs with identical titles introduce ambiguity
+* BM25 is keyword-based and doesn't capture semantic similarity
 
-These limitations are inherent to text-based retrieval systems and are not implementation errors.
+These limitations are inherent to keyword-based retrieval systems and are not implementation errors.
 
 ---
 
 ## Future Improvements
 
-* FAISS-based nearest neighbor search for faster retrieval
-* Hybrid TF-IDF + embedding re-ranking
-* Confidence threshold for "song not found" detection
-* REST API using FastAPI
-* Frontend search interface
+* **Hybrid approach**: Combine BM25 with semantic embeddings for better results
+* **FAISS integration**: Faster similarity search for large datasets
+* **Confidence thresholding**: Detect "song not found" scenarios
+* **Artist-aware ranking**: Re-rank results when artist hint is provided
+* **REST API**: Deploy using FastAPI for production use
+* **Frontend interface**: Web-based search interface
+* **Query expansion**: Automatically expand short queries
 
 ---
 
 ## Technologies Used
 
 * Python
-* PyTorch
-* Sentence-Transformers
-* NLTK
-* scikit-learn
-* Pandas
+* pandas - Data manipulation
+* NLTK - Text preprocessing
+* rank_bm25 - BM25 ranking algorithm
+* scikit-learn - Machine learning utilities
+* sentence-transformers - (For future semantic search enhancement)
+* PyTorch - Deep learning framework
+
+---
+
+## Technical Notes
+
+### Why BM25?
+
+BM25 is chosen for its:
+- Efficiency with large text corpora
+- Proven effectiveness in information retrieval
+- No training required
+- Interpretable scoring mechanism
+- Fast query execution
+
+### Model Architecture
+
+While `model.py` includes code to generate sentence embeddings using Sentence-BERT (`all-MiniLM-L6-v2`), the current search implementation (`search.py`) uses BM25 exclusively. The embedding functionality can be leveraged in future versions for hybrid search approaches.
 
 ---
 
 ## Author
 
-**Ranoshis Das**
-B.Tech CSE (Data Science)
+**Ranoshis Das**  
+B.Tech CSE (Data Science)  
 Backend & Android Developer
 
 * GitHub: [https://github.com/RanoshisDas](https://github.com/RanoshisDas)
@@ -225,6 +252,8 @@ Backend & Android Developer
 
 ## Conclusion
 
-This project successfully demonstrates a **semantic lyric search system** using modern NLP techniques. By combining transformer-based sentence embeddings with cosine similarity and Top-K evaluation, the system mirrors real-world search and recommendation engines.
+This project successfully demonstrates a **keyword-based lyric search system** using the BM25 ranking algorithm. By combining text preprocessing with BM25 scoring and Top-K evaluation, the system achieves strong retrieval performance.
 
-The quantitative results (Top-1: 83%, Top-3: 94%, Top-5: 96%) validate that the model retrieves the correct song reliably, even under ambiguity caused by short lyric snippets and overlapping themes. Overall, the project provides a strong academic and practical foundation for scalable lyric search and information retrieval applications.
+The quantitative results (Top-1: 90%, Top-3: 96%, Top-5: 97%) validate that the model retrieves the correct song reliably, even with short lyric snippets. The BM25 approach provides a solid foundation for scalable lyric search and can be enhanced with semantic embeddings for future improvements.
+
+Overall, the project provides a strong academic and practical foundation for text-based information retrieval applications.
